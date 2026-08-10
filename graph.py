@@ -1,50 +1,52 @@
 from langgraph.graph import END, START, StateGraph
 
 from .nodes import (
-    check_approval,
-    generate_api_key,
-    save_request,
+    check_permission,
+    create_request,
+    grant_access,
+    reject_request,
+    request_approval,
     validate_request,
 )
-from .state import APIKeyRequestState
+from .state import APIAccessRequestState
 
 
-def route_after_validation(
-    state: APIKeyRequestState,
-) -> str:
-    """
-    Decide whether the request passed validation.
-    """
+def route_after_validation(state):
 
-    if state.get("request_valid"):
-        return "check_approval"
+    if state.get("status") == "validated":
+        return "check_permission"
 
     return END
 
 
-def route_after_approval_check(
-    state: APIKeyRequestState,
-) -> str:
-    """
-    Decide whether the request requires approval.
-    """
+def route_after_permission_check(state):
 
-    if state.get("approval_required"):
-        return END
+    if state.get("has_permission"):
+        return "grant_access"
 
-    return "generate_api_key"
+    return "request_approval"
+
+
+def route_after_approval(state):
+
+    if state.get("approval_status") == "approved":
+        return "grant_access"
+
+    return "reject_request"
 
 
 def build_graph():
-    """
-    Build the API key request workflow.
-    """
 
-    graph = StateGraph(APIKeyRequestState)
+    graph = StateGraph(APIAccessRequestState)
 
     # -----------------------------
-    # Nodes
+    # Add nodes
     # -----------------------------
+
+    graph.add_node(
+        "create_request",
+        create_request,
+    )
 
     graph.add_node(
         "validate_request",
@@ -52,18 +54,23 @@ def build_graph():
     )
 
     graph.add_node(
-        "check_approval",
-        check_approval,
+        "check_permission",
+        check_permission,
     )
 
     graph.add_node(
-        "generate_api_key",
-        generate_api_key,
+        "request_approval",
+        request_approval,
     )
 
     graph.add_node(
-        "save_request",
-        save_request,
+        "grant_access",
+        grant_access,
+    )
+
+    graph.add_node(
+        "reject_request",
+        reject_request,
     )
 
     # -----------------------------
@@ -72,6 +79,11 @@ def build_graph():
 
     graph.add_edge(
         START,
+        "create_request",
+    )
+
+    graph.add_edge(
+        "create_request",
         "validate_request",
     )
 
@@ -85,25 +97,34 @@ def build_graph():
     )
 
     # -----------------------------
+    # Permission routing
+    # -----------------------------
+
+    graph.add_conditional_edges(
+        "check_permission",
+        route_after_permission_check,
+    )
+
+    # -----------------------------
     # Approval routing
     # -----------------------------
 
     graph.add_conditional_edges(
-        "check_approval",
-        route_after_approval_check,
+        "request_approval",
+        route_after_approval,
     )
 
     # -----------------------------
-    # Normal workflow
+    # Final nodes
     # -----------------------------
 
     graph.add_edge(
-        "generate_api_key",
-        "save_request",
+        "grant_access",
+        END,
     )
 
     graph.add_edge(
-        "save_request",
+        "reject_request",
         END,
     )
 

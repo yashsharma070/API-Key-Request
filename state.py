@@ -1,38 +1,21 @@
-from typing import Literal
-
-from typing_extensions import TypedDict
+from typing import TypedDict
 
 
-class APIKeyRequestState(TypedDict, total=False):
-    # -------------------------
-    # Request information
-    # -------------------------
-    user_id: str
-    application_name: str
-    environment: Literal["development", "staging", "production"]
-    requested_permissions: list[str]
-
-    # -------------------------
-    # Validation
-    # -------------------------
-    request_valid: bool
-    validation_message: str
-
-    # -------------------------
-    # Approval
-    # -------------------------
-    approval_required: bool
-    approval_status: Literal["pending", "approved", "rejected"]
-    approved_by: str
-    approval_message: str
-
-    # -------------------------
-    # API key
-    # -------------------------
-    api_key: str | None
-
-    # -------------------------
-    # Workflow information
-    # -------------------------
+class APIAccessRequestState(TypedDict, total=False):
     request_id: str
+
+    user_name: str
+    department: str
+    api_name: str
+    use_case: str
+
+    has_permission: bool
+
+    approval_required: bool
+    approval_status: str
+    approved_by: str
+    rejection_reason: str
+
+    access_granted: bool
     status: str
+    error: str

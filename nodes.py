@@ -1,118 +1,112 @@
 from uuid import uuid4
 
-from .state import APIKeyRequestState
+from langgraph.types import interrupt
 
 
-def validate_request(
-    state: APIKeyRequestState,
-) -> APIKeyRequestState:
-    """
-    Validate the incoming API key request.
-    """
+def create_request(state):
+
+    print("Node: create_request")
+
+    return {
+        "request_id": str(uuid4()),
+        "status": "created",
+    }
+
+
+def validate_request(state):
 
     print("Node: validate_request")
 
-    user_id = state.get("user_id")
-    application_name = state.get("application_name")
-    environment = state.get("environment")
-    permissions = state.get("requested_permissions", [])
-
-    if not user_id:
+    if not state.get("user_name"):
         return {
-            "request_valid": False,
-            "validation_message": "User ID is required.",
             "status": "validation_failed",
+            "error": "User name is required.",
         }
 
-    if not application_name:
+    if not state.get("department"):
         return {
-            "request_valid": False,
-            "validation_message": "Application name is required.",
             "status": "validation_failed",
+            "error": "Department is required.",
         }
 
-    if environment not in {
-        "development",
-        "staging",
-        "production",
-    }:
+    if not state.get("api_name"):
         return {
-            "request_valid": False,
-            "validation_message": "Invalid environment.",
             "status": "validation_failed",
+            "error": "API name is required.",
         }
 
-    if not permissions:
+    if not state.get("use_case"):
         return {
-            "request_valid": False,
-            "validation_message": "At least one permission is required.",
             "status": "validation_failed",
+            "error": "Use case is required.",
         }
 
     return {
-        "request_valid": True,
-        "validation_message": "Request validated successfully.",
-        "request_id": str(uuid4()),
         "status": "validated",
     }
 
 
-def check_approval(
-    state: APIKeyRequestState,
-) -> APIKeyRequestState:
-    """
-    Determine whether the API key request requires approval.
-    """
+def check_permission(state):
 
-    print("Node: check_approval")
+    print("Node: check_permission")
 
-    environment = state.get("environment")
+    # Temporary:
+    # Assume the user does not have permission.
+    has_permission = False
 
-    # For this project, production API keys require approval.
-    if environment == "production":
+    if has_permission:
         return {
-            "approval_required": True,
-            "approval_status": "pending",
-            "status": "waiting_for_approval",
+            "has_permission": True,
+            "approval_required": False,
+            "approval_status": "not_required",
+            "status": "permission_granted",
         }
 
     return {
-        "approval_required": False,
-        "approval_status": "approved",
-        "approval_message": "Approval not required.",
-        "status": "approved",
+        "has_permission": False,
+        "approval_required": True,
+        "approval_status": "pending",
+        "status": "approval_required",
     }
 
 
-def generate_api_key(
-    state: APIKeyRequestState,
-) -> APIKeyRequestState:
-    """
-    Generate an API key after approval.
-    """
+def request_approval(state):
 
-    print("Node: generate_api_key")
+    print("Node: request_approval")
 
-    api_key = f"ak_{uuid4().hex}"
+    decision = interrupt("API access approval required.")
+
+    print("Approval decision received:", decision)
+
+    if decision["decision"] == "approved":
+        return {
+            "approval_status": "approved",
+            "approved_by": "admin",
+            "status": "approved",
+        }
 
     return {
-        "api_key": api_key,
-        "status": "key_generated",
+        "approval_status": "rejected",
+        "rejection_reason": decision["reason"],
+        "status": "rejected",
     }
 
 
-def save_request(
-    state: APIKeyRequestState,
-) -> APIKeyRequestState:
-    """
-    Placeholder for saving the final request.
+def grant_access(state):
 
-    Later this node will store the API key request
-    and its final status in PostgreSQL.
-    """
-
-    print("Node: save_request")
+    print("Node: grant_access")
 
     return {
-        "status": "completed",
+        "access_granted": True,
+        "status": "access_granted",
+    }
+
+
+def reject_request(state):
+
+    print("Node: reject_request")
+
+    return {
+        "access_granted": False,
+        "status": "request_rejected",
     }

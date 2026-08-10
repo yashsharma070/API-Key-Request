@@ -1,0 +1,48 @@
+                    REQUEST
+                       │
+                       ▼
+                create_request
+                       │
+                       ▼
+                validate_request
+                       │
+                       ▼
+               check_permission
+                       │
+                  No permission
+                       │
+                       ▼
+               request_approval
+                       │
+                       ▼
+                  INTERRUPT
+                       │
+                       │
+                PostgreSQL
+                checkpoint
+                       │
+                       ▼
+              Admin CLI input
+                 /         \
+            approve       reject
+               │             │
+               ▼             ▼
+         Command()       Command()
+               │             │
+               └──────┬──────┘
+                      ▼
+                  RESUME
+                      │
+                      ▼
+              request_approval
+                      │
+               ┌──────┴──────┐
+               │             │
+           approved       rejected
+               │             │
+               ▼             ▼
+         grant_access   reject_request
+               │             │
+               └──────┬──────┘
+                      ▼
+                     END
